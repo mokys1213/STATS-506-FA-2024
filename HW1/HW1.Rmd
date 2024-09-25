@@ -1,0 +1,311 @@
+---
+title: "HW1"
+output: pdf_document
+author: Yoonseo Mok
+---
+
+```{r setup, include=FALSE}
+library(formatR)
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60), tidy = TRUE)
+```
+
+```{r message=FALSE}
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+```
+
+# Problem 1
+
+# A
+```{r}
+# Importing wine dataset
+wine <- read.csv("~/Desktop/Fall 2024/STATS 506/HW1/wine/wine.data", header=FALSE)
+names(wine)<-c("Class","Alcohol", "Malic acid", "Ash", "Alcalinity of ash", "Magnesium", "Total phenols",
+               "Flavanoids", "Nonflavanoid phenols", "Proanthocyanins", 
+ 	             "Color intensity", "Hue", "OD280/OD315 of diluted wines", "Proline")
+```
+
+# B
+```{r}
+# Checking how many wines within each class
+table(wine$Class)
+```
+Class 1: 59, Class 2:71, Class 3: 48\
+It is the same number as reported in "wine.names"
+
+# C-1
+```{r}
+# Looking at correlation
+cor(wine$Alcohol,wine$`Color intensity`)
+```
+The correlation is 0.55
+
+# C-2
+```{r}
+# Looking at correlation by each class between alcohol content and color intensity
+wine %>% group_by(Class) %>% summarise(cor=cor(Alcohol,`Color intensity`))
+```
+Class 1 has the highest correlation and class 2 has the lowest correlation between alcohol content and color intensity
+
+# C-3
+```{r}
+# Alcohol content that has the highest color intensity
+wine$Alcohol[which.max(wine$`Color intensity`)]
+```
+The alcohol content of the wine with the highest color intensity is 14.34
+
+# C-4
+```{r}
+# Comparing proanthocyanins to ash
+tmp=wine[wine$Proanthocyanins>wine$Ash,]
+nrow(tmp)/nrow(wine)*100
+```
+8.43% of wines had a higher content of proanthocyanins compare to ash
+
+# D
+```{r}
+tmp2=matrix(NA,4*(ncol(wine)-1),2)
+colnames(tmp2)=c("Variable","Average")
+for(i in 2:ncol(wine)){
+  tmp2[4*i-7,1]=paste0(names(wine)[i],"-Overall")
+  tmp2[4*i-6,1]=paste0(names(wine)[i],"-Class 1")
+  tmp2[4*i-5,1]=paste0(names(wine)[i],"-Class 2")
+  tmp2[4*i-4,1]=paste0(names(wine)[i],"-Class 3")
+
+  tmp2[4*i-7,2]=round(mean(wine[,i],na.rm=T),2)
+  tmp2[4*i-6,2]=round(mean(wine[wine$Class %in% 1,i],na.rm=T),2)
+  tmp2[4*i-5,2]=round(mean(wine[wine$Class %in% 2,i],na.rm=T),2)
+  tmp2[4*i-4,2]=round(mean(wine[wine$Class %in% 3,i],na.rm=T),2)
+}
+
+kable(tmp2) %>% kable_styling("striped", full_width = F) 
+```
+
+# E
+```{r}
+# Class 1 vs Class 2
+class12=subset(wine,wine$Class %in% c(1,2))
+t.test(class12$`Total phenols`~class12$Class)
+```
+
+```{r}
+# Class 1 vs Class 3
+class13=subset(wine,wine$Class %in% c(1,3))
+t.test(class13$`Total phenols`~class13$Class)
+```
+
+```{r}
+# Class 2 vs Class 3
+class23=subset(wine,wine$Class %in% c(2,3))
+t.test(class23$`Total phenols`~class23$Class)
+```
+The p-values of all three t-test are significant and show that the level of phenols differs across the three classes. The mean of phenols in group 1 vs group 2 vs group 3 are significantly different.
+
+# Problem 2
+
+# A
+```{r}
+# Importing dataset
+AskAManager <- read.csv("~/Desktop/Fall 2024/STATS 506/HW1/AskAManager.csv")
+```
+
+# B
+```{r}
+# Cleaning column name
+names(AskAManager)=c("ID","Timestamp","Age","Industry","Jobtitle","Jobtitle_add","Salary","Salary_add","Currency","Currency_Other","Context","Country","State","City","Num years_overall","Num years_field","Education","Gender","Race")
+```
+
+# C
+```{r}
+# Only USD
+USDonly=AskAManager[AskAManager$Currency %in% "USD",]
+nrow(AskAManager)
+nrow(USDonly)
+```
+Comparing the number of observations, before it was 20862 and after restricting we now have 23374
+
+# D
+```{r}
+# No one starts working before age 18
+no18=USDonly[!(USDonly$Age %in% "under 18"),]
+
+# Taking the midpoint of age
+no18$Age_rev=NA
+no18$Age_rev[no18$Age %in% "18-24"]=21
+no18$Age_rev[no18$Age %in% "25-34"]=30
+no18$Age_rev[no18$Age %in% "35-44"]=40
+no18$Age_rev[no18$Age %in% "45-54"]=50
+no18$Age_rev[no18$Age %in% "55-64"]=60
+no18$Age_rev[no18$Age %in% "65 or over"]=65
+
+# Taking the midpoint of overall experience of working 
+no18$`Num years_overall_rev`=NA
+no18$`Num years_overall_rev`[no18$`Num years_overall` %in% "1 year or less"]=0.5
+no18$`Num years_overall_rev`[no18$`Num years_overall` %in% "2 - 4 years"]=3
+no18$`Num years_overall_rev`[no18$`Num years_overall` %in% "5-7 years"]=6
+no18$`Num years_overall_rev`[no18$`Num years_overall` %in% "8 - 10 years"]=9
+no18$`Num years_overall_rev`[no18$`Num years_overall` %in% "11 - 20 years"]=15
+no18$`Num years_overall_rev`[no18$`Num years_overall` %in% "21 - 30 years"]=25
+no18$`Num years_overall_rev`[no18$`Num years_overall` %in% "31 - 40 years"]=35
+no18$`Num years_overall_rev`[no18$`Num years_overall` %in% "41 years or more"]=45
+
+# Taking the midpoint of field experience of working 
+no18$`Num years_field_rev`=NA
+no18$`Num years_field_rev`[no18$`Num years_field` %in% "1 year or less"]=0.5
+no18$`Num years_field_rev`[no18$`Num years_field` %in% "2 - 4 years"]=3
+no18$`Num years_field_rev`[no18$`Num years_field` %in% "5-7 years"]=6
+no18$`Num years_field_rev`[no18$`Num years_field` %in% "8 - 10 years"]=9
+no18$`Num years_field_rev`[no18$`Num years_field` %in% "11 - 20 years"]=15
+no18$`Num years_field_rev`[no18$`Num years_field` %in% "21 - 30 years"]=25
+no18$`Num years_field_rev`[no18$`Num years_field` %in% "31 - 40 years"]=35
+no18$`Num years_field_rev`[no18$`Num years_field` %in% "41 years or more"]=45
+
+# Now subtract age from overall experience of working
+no18$startwork=NA
+no18$startwork=no18$Age_rev-no18$`Num years_overall_rev`
+
+# Exclude those who have negative start work value
+no18=no18[no18$startwork>=0,]
+
+# Now subtract age from field experience of working
+no18$startwork_field=NA
+no18$startwork_field=no18$Age_rev-no18$`Num years_field_rev`
+
+# Exclude those who have negative start work in field value
+no18=no18[no18$startwork_field>=0,]
+
+nrow(no18)
+```
+Eliminating any rows for which their age, years of experience in their field, and years of experience total are impossible, I have 23340 rows.
+
+# E
+```{r}
+# First adding annual salary and bonus
+no18$finalsalary=rowSums(no18[,c("Salary", "Salary_add")], na.rm=TRUE)
+
+# Find the outlier value based on IQR
+low=mean(no18$finalsalary)-1.5*IQR(no18$finalsalary)
+up=mean(no18$finalsalary)+1.5*IQR(no18$finalsalary)
+
+# Eliminating any outlier(extreme) income
+incomeokay=no18[no18$finalsalary<=up & no18$finalsalary>low,]
+nrow(incomeokay)
+```
+I considered the extreme value of income using 1.5*IQR. Any income less than $13000 and higher than 199010 is considered as outlier based on our data. After excluding those people I have 21643 number of observation in my data
+
+# Problem 3
+# A
+```{r}
+#' Identify if it is a palindrome and shows the reverse 
+#' @param x A number.
+#' @returns A list if it is palindromic and the reverse of x
+#' @examples isPalindromic(199) 
+
+isPalindromic=function(x){
+  x=as.character(x)
+  
+  if(x<0){
+    stop("It is a negative integer")
+  }
+  
+  if(substr(x,nchar(x),nchar(x))==0){
+    stop("The integer ends with 0")
+  }
+  
+  reversed=stringi::stri_reverse(x)
+  
+  if(nchar(x) %% 2 == 0){ # If x is even number
+    i=nchar(x)
+    
+    firsthalfchar=substr(x,1,i/2)
+    lasthalfchar=substr(x,(i/2)+1,i)
+    
+    if(stringi::stri_reverse(firsthalfchar) == lasthalfchar){
+      isPalindromic=TRUE
+    } else {
+      isPalindromic=FALSE
+    }
+    
+  } else { # If x is odd number
+    i=nchar(x)
+    
+    firsthalfchar=substr(x,1,floor(i/2))
+    lasthalfchar=substr(x,ceiling(i/2)+1,i)
+    
+    if(stringi::stri_reverse(firsthalfchar) == lasthalfchar){
+      isPalindromic=TRUE
+    } else {
+      isPalindromic=FALSE
+    }
+  }
+    return(as.list(data.frame(isPalindromic,reversed)))
+}
+
+isPalindromic(728827)
+isPalindromic(39951)
+```
+
+# B
+```{r}
+#' Finds the next palindromic number strictly greater than the input
+#' @param x A number.
+#' @returns A numeric vector
+#' @examples nextPalindrome(199) 
+
+nextPalindrome=function(x){
+  x=as.character(x)
+  
+  if(x<0){
+    stop("It is a negative integer")
+  }
+  
+  if(nchar(x) %% 2 == 0){ # If x is even number
+    i=nchar(x)
+    
+    firsthalfchar=substr(x,1,i/2)
+    
+    if(as.numeric(paste0(firsthalfchar,stringi::stri_reverse(firsthalfchar)))>x){
+      # If the first half numbers and the reverse of that is greater than x then,
+      nextvalue=as.numeric(paste0(firsthalfchar,stringi::stri_reverse(firsthalfchar)))
+    } else {
+      # Else, take the number that is right after the half (first number of the second half)
+      # and replace the last number in the first half
+      # then, reverse that
+      takelastvalue=substr(x,(i/2)+1,(i/2)+1)
+      takelastvalueadd=paste0(substr(firsthalfchar,1,(i/2)-1),takelastvalue)
+      nextvalue=as.numeric(paste0(takelastvalueadd,stringi::stri_reverse(takelastvalueadd)))
+    }
+    
+  } else { # if x is odd number
+    i=nchar(x)
+    
+    firsthalfchar=substr(x,1,floor(i/2))
+    if(as.numeric(paste0(firsthalfchar,substr(x,floor(i/2)+1,floor(i/2)+1),stringi::stri_reverse(firsthalfchar)))>x){
+      # If the first half numbers with the middle number and the reverse of that is greater than x then,
+      nextvalue=as.numeric(paste0(firsthalfchar,substr(x,floor(i/2)+1,floor(i/2)+1),stringi::stri_reverse(firsthalfchar)))
+    } else {
+      # similar logic with even number
+      # +1 with the middle number instead
+      # we also need to take account when the middle number is 9 
+      # because 9+1=10
+      takelastvalue=substr(x,floor(i/2)+1,floor(i/2)+1)
+      if(takelastvalue<9){ 
+        takelastvalueadd=paste0(substr(firsthalfchar,1,floor(i/2)+1),(as.numeric(takelastvalue)+1))
+        nextvalue=as.numeric(paste0(takelastvalueadd,stringi::stri_reverse(firsthalfchar)))
+      } else {
+        takelastvalueadd=paste0(as.numeric(substr(x,1,ceiling(i/2)))+1)
+        nextvalue=as.numeric(paste0(takelastvalueadd,stringi::stri_reverse(takelastvalueadd)))
+      }
+    }
+    
+  }
+    return(nextvalue)
+}
+
+nextPalindrome(391)
+nextPalindrome(9928)
+nextPalindrome(19272719)
+nextPalindrome(109)
+nextPalindrome(2)
+```
