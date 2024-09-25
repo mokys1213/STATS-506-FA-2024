@@ -9,6 +9,9 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# Github link
+https://github.com/mokys1213/STATS-506-FA-2024/blob/main/HW2/HW2.pdf
+
 # Problem 1
 # A
 ## Version 1
