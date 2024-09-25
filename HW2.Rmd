@@ -1,0 +1,231 @@
+---
+title: "HW2"
+author: "Yoonseo Mok"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Problem 1
+# A
+## Version 1
+```{r}
+#' Version 1: Implement this game using a loop
+#'
+#' @param n The number of dice to roll.
+#' @return Total winnings
+
+v1 <- function(n) {
+  tot_win <- 0
+  for (i in 1:n) {
+    rollnumb <- sample(1:6, 1)  
+    if (rollnumb %in%  3 | rollnumb %in% 5) {
+      tot_win <- tot_win + 2 * rollnumb - 2
+    } else {
+      tot_win <- tot_win - 2
+    }
+  }
+  return(tot_win)
+}
+```
+
+## Version 2
+```{r}
+#' Version 2: Implement this game using built-in R vectorized functions.
+#'
+#' @param n The number of dice to roll.
+#' @return Total winnings
+
+v2 <- function(n) {
+  rollnumb <- sample(1:6, n,replace = T)  
+  win=ifelse(rollnumb %in% c(3,5),2*rollnumb-2,-2)
+  total_win=sum(win)
+  return(total_win)
+}
+```
+
+## Version 3
+```{r}
+#' Version 3: Implement this by rolling all the dice into one 
+#' and collapsing the die rolls into a single table()
+#'
+#' @param n The number of dice to roll.
+#' @return Total winnings
+
+v3 <- function(n) {
+  rollnumb <- sample(1:6, n, replace = TRUE)  
+  rollnumb_table <- table(factor(rollnumb, levels = 1:6))
+  
+  tot_win <- sum((rollnumb_table[3] * (3*2 - 2)) + (rollnumb_table[5]* (5*2 - 2)), na.rm = TRUE)
+  tot_lose <- sum(rollnumb_table[c(1,2,4,6)] * (-2), na.rm = TRUE)
+
+  return(tot_win + tot_lose)
+}
+
+```
+
+## Version 4
+```{r}
+#' Version 4: Implement this game by using one of the “apply” functions.
+#'
+#' @param n The number of dice to roll.
+#' @return Total winnings
+
+v4 <- function(n) {
+  rollnumb <- sample(1:6, n, replace = TRUE)  
+  winorlose <- sapply(rollnumb, function(x) {
+    if (x %in%  3 | x %in% 5) {
+      return(2*x-2)
+    } else {
+      return(-2)
+    }
+   }
+  )
+  return(sum(winorlose))
+}
+```
+
+# B
+```{r}
+# Demonstrate that all versions work
+v1(3)
+v1(3000)
+v2(3)
+v2(3000)
+v3(3)
+v3(3000)
+v4(3)
+v4(3000)
+```
+All versions work
+
+# C
+```{r}
+# Demonstrate that the four versions give the same result. 
+set.seed(123)
+v1(3)
+set.seed(123)
+v1(3000)
+set.seed(123)
+v2(3)
+set.seed(123)
+v2(3000)
+set.seed(123)
+v3(3)
+set.seed(123)
+v3(3000)
+set.seed(123)
+v4(3)
+set.seed(123)
+v4(3000)
+```
+All four versions give the same result. 
+
+# D
+```{r, warning=FALSE}
+library(microbenchmark)
+
+# Demonstrate the speed of the implementations
+# Low input of 1,000 
+x1<-1000
+microbenchmark(v1(x1), v2(x1),v3(x1),v4(x1))
+
+# High input of 100000
+x2<-100000
+microbenchmark(v1(x2), v2(x2),v3(x2),v4(x2))
+```
+Comparing the performance with low input of 1000, Version 2 function where we implemented the game using built-in R vectorized functions has the fastest performance. 
+Comparing the performance with high input of 100000, Version 3 function where we Implemented the dice rolls into a single table() has the fastest performance. While version 3 is the fastest, version 2 function performance is similar. 
+In both comparison, Version 1 function where we implemented the game using loop performs the slowest.
+
+# E
+```{r}
+# Evidence based upon a Monte Carlo simulation
+simnumb <- 1000000
+set.seed(123)
+
+# Generate total winnings using version 2 function
+total_net_result = v2(simnumb)
+
+# Calculate average net result per game
+average_net_result <- total_net_result / simnumb
+average_net_result
+
+# Calculating using probability (just another way of providing evidence)
+1/6*4+1/6*8+4/6*(-2)
+```
+Based on the monte carlo simulation, we can see that we win 0.66. Therefore, we can conclude that this is a fair game since we are not loosing anything at least. 
+
+# Problem 2
+```{r}
+# Importing the dataset
+cars=read.csv("cars.csv")
+```
+
+# A
+```{r}
+# Rename the columns 
+names(cars)=c("Height","Length","Width","Driveline","EngineType","Hybrid","NumbForwardGears",
+              "Transmission","Citympg","FuelType","Highwaympg","Class","ID","Make","ModelYear","Year",
+              "Horsepower","Torque")
+```
+
+# B
+```{r}
+# Restrict the data to cars whose Fuel Type is “Gasoline”.
+cars=cars[cars$FuelType %in% "Gasoline",]
+```
+
+# C
+```{r}
+# Checking highway mileage variable distribution
+summary(cars$Highwaympg)
+hist(cars$Highwaympg)
+
+# Log transformation of highway mpg variable
+cars$Highwaympg_log=log(cars$Highwaympg)
+hist(cars$Highwaympg_log)
+```
+Highway gas mileage variable is slightly skewed. Although it is not extremely skewed, a log transformation could be used to normalize the highway mpg variable.
+
+# D
+```{r}
+# Fit a linear regression model
+model1=lm(Highwaympg_log ~ Torque+Horsepower+Height+Length+Width+factor(Year), data = cars)
+summary(model1)
+```
+exp(-2.294e-03)=0.9977086
+For every one-unit increase in the torque variable, highway gas mileage decreases by a factor of about 0.9977086, holding horsepower, all three dimensions of the car, and the year the car was released as constant.
+
+# E
+```{r}
+# Fit a linear regression model with interaction
+model2=lm(Highwaympg_log ~ Torque*Horsepower+Height+Length+Width+factor(Year), data = cars)
+summary(model2)
+
+library(interactions)
+
+# Create interaction plot
+interact_plot(model2, pred = Torque, modx = Horsepower, 
+              modx.values = c(170, 250, 330), at = list(Year = 2010), data=cars)
+interact_plot(model2, pred = Torque, modx = Horsepower, 
+              modx.values = c(170, 250, 330), at = list(Year = 2011), data=cars)
+interact_plot(model2, pred = Torque, modx = Horsepower, 
+              modx.values = c(170, 250, 330), at = list(Year = 2012), data=cars)
+```
+
+# F
+```{r}
+# Creating design matrix
+X <- model.matrix( ~ Torque + Horsepower + Height + Length + Width + factor(Year), data = cars)
+Y <- cars$Highwaympg_log
+
+# Calculate the beta coefficients using design matrix
+solve(t(X) %*% X) %*% t(X) %*% Y
+
+```
+It gives out the same results as lm did prior
+
