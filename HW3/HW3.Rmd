@@ -8,6 +8,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE,warning = FALSE)
 ```
 
+Link to github: https://github.com/mokys1213/STATS-506-FA-2024/blob/main/HW3/HW3.html
+
 ```{r}
 library(foreign)
 library(kableExtra)
