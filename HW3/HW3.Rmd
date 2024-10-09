@@ -1,14 +1,15 @@
 ---
 title: "HW 3"
 author: "Yoonseo Mok"
-output: html_document
+output:
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,warning = FALSE)
 ```
 
-Link to github: https://github.com/mokys1213/STATS-506-FA-2024/blob/main/HW3/HW3.html
+Link to github: https://github.com/mokys1213/STATS-506-FA-2024/blob/main/HW3/HW3.pdf
 
 ```{r}
 library(foreign)
@@ -59,6 +60,9 @@ kable(p1dat %>% group_by(age10year) %>% count(VIQ220) %>% mutate(Percentage = n 
 
 # C
 ```{r}
+# Renaming age variable
+p1dat$Age=p1dat$RIDAGEYR
+
 # Recoding race variable
 p1dat$Race=NA
 p1dat$Race[p1dat$RIDRETH1 %in% 1]="Mexican American"
@@ -76,11 +80,11 @@ p1dat$Gender[p1dat$RIAGENDR %in% 2]="Female"
 p1dat$Income_Ratio=p1dat$INDFMPIR
 
 # Logistic regression with age
-model1 <- glm(VIQ220 ~ age10year, data = p1dat, family = binomial)
+model1 <- glm(VIQ220 ~ Age, data = p1dat, family = binomial)
 # Logistic regression with age, race, gender
-model2 <- glm(VIQ220 ~ age10year + Race + Gender, data = p1dat, family = binomial)
+model2 <- glm(VIQ220 ~ Age + Race + Gender, data = p1dat, family = binomial)
 # Logistic regression with age, race, gender, Poverty Income ratio
-model3 <- glm(VIQ220 ~ age10year + Race + Gender + Income_Ratio, data = p1dat, family = binomial)
+model3 <- glm(VIQ220 ~ Age + Race + Gender + Income_Ratio, data = p1dat, family = binomial)
 
 # Computing psuedo-R^2
 model1_r2 = 1 - (model1$deviance / model1$null.deviance)
