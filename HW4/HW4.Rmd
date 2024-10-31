@@ -100,7 +100,7 @@ get_temp=function(month, year, data, average_fn=mean, celsius=FALSE) {
   tmp=data %>% select(year,temp,month_numeric) %>% rename(data_year=year) %>% 
     filter(data_year %in% year, month_numeric %in% month) %>% # subsetting matching data
     summarize(averagetmp = average_fn(temp)) %>% # calculate average temperature based on function
-    mutate(averagetmp=ifelse(isTRUE(celsius), 5/9*(averagetmp-32), averagetmp))
+    mutate(averagetmp=ifelse(celsius %in% TRUE, 5/9*(averagetmp-32), averagetmp))
   
   tmp=as.numeric(tmp)
   
