@@ -1,0 +1,181 @@
+---
+title: "HW3"
+author: "Yoonseo Mok"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+```
+
+# Problem 1
+```{r}
+# Installing and loading nycflights13
+# install.packages("nycflights13")
+library(nycflights13)
+```
+
+# A
+```{r}
+# Left joining airports dataset to get the name of the airport
+tmp1=flights %>% left_join(airports %>% rename(origin = faa))
+
+# Generating a table reporting the mean and median departure delay per airport
+tmp1 %>% group_by(name) %>% summarize(mean_delay=mean(dep_delay,na.rm = T), 
+                                      median_delay=median(dep_delay,na.rm=T),n=n()) %>% 
+  filter(n>10) %>% arrange(desc(mean_delay)) %>% select(-n)
+
+# Generating a table reporting the mean and median arrival delay per airport
+tmp2=flights %>% group_by(dest) %>% summarize(mean_delay=mean(arr_delay,na.rm = T),
+                                      median_delay=median(arr_delay,na.rm=T),n=n()) %>% 
+                  ungroup() %>% filter(n>=10) %>% rename(faa = dest)
+tmp2 %>% left_join(airports, by = "faa") %>% select(name, mean_delay, median_delay) %>% 
+  arrange(desc(mean_delay)) %>% print(n = 1e3)
+```
+
+# B
+```{r}
+# Identifying how many flights did the aircraft model with the fastest average speed take
+flights %>% left_join(planes,by ="tailnum") %>% mutate(time = air_time/60, mph = distance/time) %>%
+  group_by(model) %>% summarize(average_speed=mean(mph, na.rm=TRUE),n_flights = n()) %>% 
+  arrange(desc(average_speed))  %>% slice(1)
+```
+
+# Problem 2
+```{r}
+# Loading chicago-nmmaps data
+nnmaps <- read_csv("chicago-nmmaps.csv")
+```
+
+```{r}
+##' Function for getting average monthly temperature
+##' @param month numeric 1-12 or a string.
+##' @param year Year
+##' @param data The data set to obtain data from.
+##' @param average_fn A function with which to compute the mean. Default is mean.
+##' @param celsius Logically indicating whther the results should be in celsius. Default FALSE.
+##' @return Average temperature
+get_temp=function(month, year, data, average_fn=mean, celsius=FALSE) {
+  
+  # Error message for month
+  if (is.character(month) %in% TRUE) {
+    fullmonth=c("January","February","March","April","May","June","July",
+                "August","September","October","November","December")
+    abbr=substr(fullmonth, 1, 3)
+    if(nchar(month) %in% 3){
+      month=match(tolower(month), tolower(abbr))
+    } else {
+      month=match(tolower(month), tolower(fullmonth))
+    }
+  } else if (is.numeric(month) %in% TRUE) {
+    if (month<1 | month>12) {
+      stop("Invalid month")
+    }
+  } else {
+    stop("month must be numeric or character")
+  }
+  
+  # Error message for year
+  if (year<1997 | year>2000) {
+    stop("year is not in the data")
+  }
+  if (!is.numeric(year)) {
+    stop("year must be numeric")
+  }
+  
+  # Error message for average_fn
+  if (!(is.function(average_fn))) {
+    stop("average_fn must be a function")
+  }
+  
+  tmp=data %>% select(temp, month_numeric, year) %>% rename(data_year=year) %>% 
+    filter(data_year %in% year, month_numeric %in% month) %>% # subsetting matching data
+    summarize(averagetmp = average_fn(temp)) %>% # calculate average temperature based on function
+    mutate(averagetmp=ifelse(isTRUE(celsius), 5/9*(averagetmp-32), averagetmp))
+  
+  tmp=as.numeric(tmp)
+  
+  return(tmp)
+}
+```
+
+```{r,error=TRUE}
+get_temp("Apr", 1999, data = nnmaps)
+get_temp("Apr", 1999, data = nnmaps, celsius = TRUE)
+get_temp(10, 1998, data = nnmaps, average_fn = median)
+get_temp(13, 1998, data = nnmaps)
+get_temp(2, 2005, data = nnmaps)
+get_temp("November", 1999, data =nnmaps, celsius = TRUE,
+         average_fn = function(x) {
+           x %>% sort -> x
+           x[2:(length(x) - 1)] %>% mean %>% return
+         })
+```
+
+# Problem 3
+```{r}
+# Loading the dataset
+p3=read_csv("df_for_ml_improved_new_market.csv")
+```
+
+# A
+```{r}
+# Generating dataframe to calculate the mean price by year
+tmpa <- p3 %>%
+  group_by(year) %>%
+  summarize(average_price = mean(price_usd, na.rm = TRUE))
+
+# Creating line plot 
+ggplot(tmpa, aes(x = year, y = average_price)) +
+  geom_line(color = "black", linewidth = 1) +
+  geom_point(color = "grey") +
+  labs(title = "Average Sales Price Over Time")+ xlab("Year")+
+  ylab("Average Sales Price (USD)") +
+  theme_minimal()
+```
+Looking at the plot, we see a continuous increase in average sales price from year 2001 to 2008 (being the highest), and sharp decrease in 2009. This suggests that there was a change in average sales price over time. 
+
+# B
+```{r}
+# Renaming genre related columns
+p3=p3 %>% rename(Photography=Genre___Photography,Painting=Genre___Painting,
+                 Sculpture=Genre___Sculpture,Print=Genre___Print,Others=Genre___Others)
+
+# Making a long dataset that indicates genre for each painting
+p3b=p3 %>% pivot_longer(cols=c(Photography,Painting,Sculpture,Print,Others),
+                        names_to = "genre",values_to = "count") %>% filter(count %in% 1) 
+
+# Generating percentage within each year for each genre
+p3b2=p3b %>% group_by(year, genre) %>% summarise(count = n()) %>% ungroup() %>%
+  group_by(year) %>% mutate(percent = count / sum(count) * 100)
+
+# Generating stacked bar plot
+ggplot(p3b2, aes(x = year, y=percent, fill = genre)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(title = "Distribution of Genre of Sales Across Years",fill="Genre")+
+  xlab("Year")+ylab("Percentage")+
+  theme_minimal()
+```
+Looking at the plot, the distribution of genre of sales across years appear to change. There was no print genre in early years, but it started to come out from year 2000. Painting genre had the most percentage in year 1997, but it started to decrease. More of the photography genre came out from year 1999.
+
+# C
+```{r}
+# Calculate average price per genre per year
+p3c=p3b %>% group_by(year, genre) %>% summarize(average_price = mean(price_usd, na.rm = TRUE)) %>% rename(Genre=genre)
+
+# Generating line plot for each genre
+ggplot(p3c, aes(x = year, y = average_price, color = Genre)) +
+  geom_line()+geom_point() +
+  labs(title = "Change in Sales Price Over Time by Genre",
+       x = "Year",
+       y = "Average Sales Price (USD)") +
+  facet_wrap(~Genre)+
+  theme_minimal()
+```
+For photography genre, it had a sharp increase in average sales price in 2006, and slight decrease in 2007 but reached the peak in 2008. Painting and others genre has a similar pattern, having increasing trend and reaching its peak in 2008. Print genre has up and downs in average sales price. Sculpture genre has an increase in average sales price across the years except the early years. 
+
