@@ -1,0 +1,264 @@
+---
+title: "HW5"
+author: "Yoonseo Mok"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Problem 1
+```{r}
+# Rcpp library
+library(Rcpp)
+
+# Defining GCD and LCM functions
+cppFunction('
+int gcd(int a, int b) {
+    if (b == 0) return abs(a);
+    return gcd(b, a % b);
+}
+')
+
+cppFunction('
+int lcm(int a, int b) {
+    return abs(a*b) / std::gcd(a,b);
+}
+')
+```
+
+```{r}
+# Defining constructor
+setClass("Rational",
+         slots=c(numerator="numeric", denominator="numeric"))
+
+# Defining validator
+setValidity("Rational", function(object){
+  if(object@denominator==0){
+    return("Denominator is non-zero")
+  }
+  TRUE
+  })
+
+##' @title Create a `rational` object
+##' @param numerator and denominator
+##' @return rational
+##' @export
+create_rational<-function(numerator, denominator) {
+  invisible(new("Rational", numerator=numerator, denominator=denominator))
+}
+
+# Defining a show method
+setMethod("show", "Rational",
+  function(object) {
+    cat(paste(object@numerator,"/",object@denominator,"\n"))
+  }
+)
+
+# Defining a simplify method
+simplify <- function(x) stop("This function needs specfic definition")
+
+setMethod("simplify", "Rational", function(x) {
+  if (x@numerator==0) {
+    print(0)
+  } else {
+    gcd_num <- gcd(x@numerator, x@denominator)
+    x@numerator= x@numerator/gcd_num
+    x@denominator=x@denominator/gcd_num
+    print(x)
+  }
+})
+
+# Defining quotient method
+quotient <- function(x,...) stop("This function needs specfic definition")
+
+setMethod("quotient", "Rational", function(x, digits = NULL) {
+  val <- x@numerator / x@denominator
+  if (!is.null(digits) && is.numeric(digits)) {
+    format_val <- format(val,digits=digits)
+    print(format_val)
+  } else {
+    print(val)
+  }
+})
+
+# Defining Addition
+setMethod("+", signature(e1="Rational", 
+                         e2="Rational"), 
+          function(e1, e2) {
+          common_denom=lcm(e1@denominator, e2@denominator)
+          numerator2=(e1@numerator*(common_denom/e1@denominator))+
+                   (e2@numerator*(common_denom/e2@denominator))
+          simplify(create_rational(numerator2, common_denom))
+})
+
+# Defining Subtraction
+setMethod("-", signature(e1="Rational", 
+                         e2="Rational"), 
+          function(e1, e2) {
+          common_denom=lcm(e1@denominator, e2@denominator)
+          numerator2=(e1@numerator*(common_denom/e1@denominator))-
+                   (e2@numerator*(common_denom/e2@denominator))
+          simplify(create_rational(numerator2, common_denom))
+})
+
+# Defining Multiplication
+setMethod("*", signature(e1="Rational", 
+                         e2="Rational"), 
+          function(e1, e2) {
+          numerator2=e1@numerator*e2@numerator
+          denominator2=e1@denominator*e2@denominator
+          simplify(create_rational(numerator2,denominator2))
+})
+
+# Defining Division
+setMethod("/", signature(e1="Rational", 
+                         e2="Rational"), 
+          function(e1, e2) {
+          numerator2=e1@numerator*e2@denominator
+          denominator2=e1@denominator*e2@numerator 
+          simplify(create_rational(numerator2,denominator2))
+})
+```
+
+```{r}
+# Creating Rational objects
+r1 <- create_rational(24,6)
+r2 <- create_rational(7,230)
+r3 <- create_rational(0,4)
+```
+
+```{r, error=TRUE}
+# Evaluating the following code
+r1
+r3
+r1 + r2
+r1 - r2
+r1 * r2
+r1 / r2
+r1 + r3
+r1 * r3
+r2 / r3
+quotient(r1)
+quotient(r2)
+quotient(r2, digits = 3)
+quotient(r2, digits = 3.14)
+quotient(r2, digits = "avocado")
+q2 <- quotient(r2, digits = 3)
+q2
+quotient(r3)
+simplify(r1)
+simplify(r2)
+simplify(r3)
+```
+
+# Problem 2
+```{r}
+# Loading packages
+library(tidyverse)
+library(plotly)
+
+# Loading the dataset
+p2=read_csv("df_for_ml_improved_new_market.csv")
+```
+
+# A
+```{r}
+# Renaming genre related columns
+p2=p2 %>% rename(Photography=Genre___Photography,Painting=Genre___Painting,
+                 Sculpture=Genre___Sculpture,Print=Genre___Print,Others=Genre___Others)
+
+# Making a long dataset that indicates genre for each painting
+p2b=p2 %>% pivot_longer(cols=c(Photography,Painting,Sculpture,Print,Others),
+                        names_to = "genre",values_to = "count") %>% filter(count %in% 1) 
+
+# Generating percentage within each year for each genre
+p2b2=p2b %>% group_by(year, genre) %>% summarise(count = n()) %>% ungroup() %>%
+  group_by(year) %>% mutate(percent = count / sum(count) * 100)
+
+# Generating stacked bar plot using plotly
+plot_ly(data=p2b2,x= ~year,y= ~percent,color= ~genre,type='bar') %>%
+  layout(title = "Distribution of Genre of Sales Across Years",xaxis=list(title="Year"),
+    yaxis=list(title="Percentage"),barmode="stack")
+```
+
+# B
+```{r}
+# Calculate average price per year for overall trend
+overall_p=p2b %>% group_by(year) %>%
+  summarize(average_price = mean(price_usd, na.rm=TRUE)) %>% mutate(Genre ="Overall")  
+
+# Calculate average price per year and genre
+genre_p=p2b %>% group_by(year,genre) %>%
+  summarize(average_price =mean(price_usd, na.rm=TRUE)) %>%
+  rename(Genre=genre) %>% ungroup()
+
+# Plotting overall trend using plotly
+fig <- plot_ly() %>%
+  add_trace(data =overall_p, x = ~year, y = ~average_price, type ='scatter', 
+            mode='lines+markers', visible =TRUE)
+
+# Add traces for each genre, initially hidden
+for (genre in unique(genre_p$Genre)) {
+  fig <- fig %>%
+    add_trace(data = subset(genre_p, Genre==genre), x = ~year, y = ~average_price, type ='scatter', 
+              mode ='lines+markers',visible =FALSE)
+}
+
+# Creating dropdown buttons
+buttons <- list(
+  list(method = "restyle", args =list("visible",c(TRUE,rep(FALSE,5))),label="Overall"))
+
+# Adding the button to the plot
+for (i in 1:5) {
+  genre <- unique(genre_p$Genre)[i]
+  visibility <- rep(FALSE, length(unique(genre_p$Genre)) + 1)  
+  visibility[i+1]=TRUE
+  buttons <- append(buttons,list(list(method="restyle", args =list("visible", visibility),label=genre)))
+}
+
+# Adding layouts
+fig %>% layout(title = "Average Sales Price Over Time",xaxis = list(title = "Year"),
+    yaxis = list(title = "Average Sales Price (USD)"),
+    updatemenus=list(list(type="dropdown",buttons=buttons,showactive=TRUE)),showlegend=FALSE)
+```
+
+# Problem 3
+```{r}
+# Loading packages
+library(nycflights13)
+library(data.table)
+```
+
+```{r}
+# Generate a table reporting the mean and median departure delay per airport
+flights=data.table(flights)
+p3a=merge(flights[, faa := origin],airports, by = "faa", all.x = TRUE)
+p3a[,.(N =.N, mean_delay = mean(dep_delay, na.rm = TRUE), median_delay = median(dep_delay, na.rm = TRUE)),
+       by = name] |> _[N >=10, !"N"] |> _[order(mean_delay, decreasing = TRUE)]
+```
+
+```{r}
+# Generating a table reporting the mean and median arrival delay per airport
+flights=data.table(flights)
+p3a2=merge(flights[, faa := dest],airports,by = "faa",
+                all.x = TRUE)
+
+p3a2[,.(name = ifelse(is.na(first(name)), first(faa), first(name)),
+           N = .N,mean_delay = mean(arr_delay, na.rm = TRUE),
+           median_delay = median(arr_delay, na.rm = TRUE)),by = faa][N >=10,!c("faa", "N")][order(-mean_delay)] |> print(x = _, nrows = 1e3)
+```
+
+# B
+```{r}
+# Table of aircraft model with the fastest average speed
+planes=data.table(planes)
+p3b =merge(flights,planes,by = "tailnum",all.x = TRUE)
+p3b2=p3b[, `:=`(n =.N,
+          average_mph = mean(distance/(air_time/60), na.rm = TRUE)),by = model]
+
+p3b2[p3b2[,.I[which.max(average_mph)]],.(model, average_mph, n)]
+```
