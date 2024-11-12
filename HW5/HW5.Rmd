@@ -10,6 +10,8 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+https://github.com/mokys1213/STATS-506-FA-2024/blob/main/HW5/HW5.html
+
 # Problem 1
 ```{r}
 # Rcpp library
