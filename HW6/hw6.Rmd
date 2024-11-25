@@ -1,0 +1,104 @@
+---
+title: "HW 6"
+author: "Yoonseo Mok"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(DBI)     
+library(parallel)
+library(future)
+library(data.table)
+```
+
+```{r}
+# Import the SQLite database of the Lahman data
+lahman <- dbConnect(RSQLite::SQLite(), "lahman_1871-2022.sqlite")
+
+# Reading in fielding data
+Fielding=dbGetQuery(lahman, "SELECT * FROM Fielding")
+# Calculating Range Factor
+Fielding$RF=3*(Fielding$PO+Fielding$A)/Fielding$InnOuts
+# Data cleaning
+fielding=na.omit(Fielding[, c("teamID", "RF")])
+fielding=fielding[!is.infinite(fielding$RF),]
+
+# Calculating the average RF for each team
+point_est=aggregate(fielding$RF,by=list(fielding$teamID), FUN =mean)
+colnames(point_est)=c("teamID", "meanRF")
+```
+
+# A
+```{r}
+fielding_dat=data.table(fielding)
+
+# Bootstrap using data.table
+f = function(data) {
+  tmp=data[,.SD[sample(.N, replace=TRUE)], by=teamID]
+  return(tmp[,.(meanRF = mean(RF)), by=teamID])
+}
+
+# Checking the function
+f(fielding_dat)
+
+# Measuring time
+system.time(f(fielding_dat))
+```
+
+# A1: Without any parallel processing
+```{r}
+reps=1000
+
+# Using lapply
+system.time({
+  result1=lapply(seq_len(reps), function(x) f(fielding_dat))
+})
+```
+
+# A2: Using parallel processing with the parallel package
+```{r}
+# Using mcapply 
+system.time({
+  result2=mclapply(seq_len(reps), function(x) f(fielding_dat), mc.cores=5)
+})
+```
+
+# A3: Using futures with the future package
+```{r}
+# Using future
+plan(multisession)
+system.time({
+  result3=lapply(seq_len(reps), function(x) {
+    future(f(fielding_dat),seed=TRUE)
+  })
+  result3 =lapply(result3,value)
+})
+```
+
+# B 
+```{r}
+# Generating a table showing the estimated RF and associated SE from the three approaches.
+tablesum <- function(results) {
+  bind=rbindlist(results)
+  summary=bind[, .(meanRF=mean(meanRF), SE=sd(meanRF)), by=teamID]
+  return(summary)
+}
+
+# Showing the results
+print(tablesum(result1), n = 1e3)
+print(tablesum(result2), n = 1e3)
+print(tablesum(result3), n = 1e3)
+```
+
+# C
+Without Parallel Processing (lapply) it took 11.7 seconds for 1000 simulations
+Using parallel (mclapply) it took 2.6 seconds for 1000 simulations
+Using future Package, it took 72.8 seconds for 1000 simulations
+
+Using parallel (mclapply) is the best choice for this problem. It is the fastest.
+
+But all three methods resulted similar mean estimates and standard errors
