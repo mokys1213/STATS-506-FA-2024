@@ -8,6 +8,8 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+https://github.com/mokys1213/STATS-506-FA-2024/blob/main/HW6/hw6.pdf
+
 ```{r}
 library(DBI)     
 library(parallel)
@@ -95,8 +97,8 @@ print(tablesum(result3), n = 1e3)
 ```
 
 # C
-Without Parallel Processing (lapply) it took 11.7 seconds for 1000 simulations
-Using parallel (mclapply) it took 2.6 seconds for 1000 simulations
+Without Parallel Processing (lapply) it took 11.7 seconds for 1000 simulations\
+Using parallel (mclapply) it took 2.6 seconds for 1000 simulations\
 Using future Package, it took 72.8 seconds for 1000 simulations
 
 Using parallel (mclapply) is the best choice for this problem. It is the fastest.
