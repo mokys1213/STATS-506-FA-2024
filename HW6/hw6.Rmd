@@ -87,13 +87,14 @@ system.time({
 tablesum <- function(results) {
   bind=rbindlist(results)
   summary=bind[, .(meanRF=mean(meanRF), SE=sd(meanRF)), by=teamID]
-  return(summary)
+  tabres =summary[order(-meanRF)][1:10] # only the top 10 teams
+  return(tabres)
 }
 
 # Showing the results
-print(tablesum(result1), n = 1e3)
-print(tablesum(result2), n = 1e3)
-print(tablesum(result3), n = 1e3)
+tablesum(result1)
+tablesum(result2)
+tablesum(result3)
 ```
 
 # C
